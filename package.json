@@ -1,0 +1,15 @@
+{
+  "name": "com.raxy.quest",
+  "version": "1.0.0",
+  "displayName": "RAXY Quest System",
+  "author": {
+    "name": "RobyRAX",
+    "url": "https://github.com/RobyRAX"
+  },
+  "dependencies": {
+    "com.raxy.inventory": "1.0.0",
+    "com.raxy.utility": "1.0.0",
+    "com.raxy.utility.localization": "1.0.0",
+    "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask"
+  }
+}
