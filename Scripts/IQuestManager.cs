@@ -5,24 +5,24 @@ namespace RAXY.QuestSystem
 {
     public interface IQuestManager
     {
-        IQuestFactory QuestFactory { get; }
-        QuestDatabaseSO QuestDatabase { get; }
+        public IQuestFactory QuestFactory { get; }
+        public IQuestDatabase QuestDatabase { get; }
 
-        IReadOnlyDictionary<string, QuestStatus> AllQuestStatusDict { get; }
-        IReadOnlyDictionary<string, ActiveQuestProgress> ActiveQuestDict { get; }
-        string TrackedQuest { get; }
+        public Dictionary<string, QuestStatus> AllQuestStatusDict { get; set; }
+        public Dictionary<string, ActiveQuestProgress> ActiveQuestDict { get; set; }
+        public string TrackedQuest { get; set; }
 
-        event Action<string> OnTrackedQuestChanged;
-        event Action<string> OnQuestTaken;
-        event Action<string> OnQuestCompleted;
-        event Action<ObjectiveProgressBase> OnObjectiveProgressed;
-        event Action<ObjectiveProgressBase> OnObjectiveDone;
+        public event Action<string> OnTrackedQuestChanged;
+        public event Action<string> OnQuestTaken;
+        public event Action<string> OnQuestCompleted;
+        public event Action<ObjectiveProgressBase> OnObjectiveProgressed;
+        public event Action<ObjectiveProgressBase> OnObjectiveDone;
 
-        void InitAllQuest(bool force = false);
-        void TakeQuest(string questId);
-        void CompleteQuest(string questId);
-        void SetQuestAsTracked(string questId);
-        void UntrackQuest();
-        void NotifyQuestObjectsRefresh();
+        public void InitAllQuest(bool force = false);
+        public void TakeQuest(string questId);
+        public void CompleteQuest(string questId);
+        public void SetQuestAsTracked(string questId);
+        public void UntrackQuest();
+        public void NotifyQuestObjectsRefresh();
     }
 }

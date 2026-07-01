@@ -55,7 +55,7 @@ namespace RAXY.QuestSystem
         {
             get
             {
-                string fromJson = PlayerPrefs.GetString(QuestDatabaseSO.QUESTS_PLAYER_PREF);
+                string fromJson = PlayerPrefs.GetString(QuestEditorConstants.QUESTS_PLAYER_PREF);
                 return JsonConvert.DeserializeObject<List<string>>(fromJson);
             }
         }

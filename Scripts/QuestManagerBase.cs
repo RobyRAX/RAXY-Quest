@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using RAXY.Utility;
 using Sirenix.OdinInspector;
 using UnityEngine;
@@ -15,44 +14,14 @@ namespace RAXY.QuestSystem
         public event Action<ObjectiveProgressBase> OnObjectiveProgressed;
         public event Action<ObjectiveProgressBase> OnObjectiveDone;
 
-        [TitleGroup("Ref")]
-        [InfoBox("This object doesn't contain IQuestFactory", VisibleIf = "@ValidateQuestFactory", InfoMessageType = InfoMessageType.Error)]
-        public GameObject QuestFactoryObj;
-
-        bool ValidateQuestFactory =>
-            QuestFactoryObj != null && QuestFactoryObj.GetComponent<IQuestFactory>() == null;
-
-        [TitleGroup("Ref")]
-        [field: NonSerialized]
-        IQuestFactory _questFactory;
-
-        public IQuestFactory QuestFactory
-        {
-            get
-            {
-                if (_questFactory == null && QuestFactoryObj != null &&
-                    QuestFactoryObj.TryGetComponent(out IQuestFactory factory))
-                {
-                    _questFactory = factory;
-                }
-
-                return _questFactory;
-            }
-            set => _questFactory = value;
-        }
-
-        [TitleGroup("Ref")]
-        [SerializeField]
-        QuestDatabaseSO questDatabaseSO;
-        public QuestDatabaseSO QuestDatabase => questDatabaseSO;
+        public IQuestFactory QuestFactory { get; set; }
+        public IQuestDatabase QuestDatabase { get; set; }
 
         [TitleGroup("All Quests")]
         [ShowInInspector]
         [DictionaryDrawerSettings(KeyLabel = "Quest Id", ValueLabel = "Quest Status")]
         [HideReferenceObjectPicker]
-        public Dictionary<string, QuestStatus> AllQuestStatusDict = new();
-
-        IReadOnlyDictionary<string, QuestStatus> IQuestManager.AllQuestStatusDict => AllQuestStatusDict;
+        public Dictionary<string, QuestStatus> AllQuestStatusDict { get; set; } = new();
 
         bool _allQuestInitialized;
 
@@ -60,22 +29,21 @@ namespace RAXY.QuestSystem
         [ShowInInspector]
         [DictionaryDrawerSettings(KeyLabel = "Quest Id", ValueLabel = "Progress")]
         [HideReferenceObjectPicker]
-        public Dictionary<string, ActiveQuestProgress> ActiveQuestDict = new();
-
-        IReadOnlyDictionary<string, ActiveQuestProgress> IQuestManager.ActiveQuestDict => ActiveQuestDict;
+        public Dictionary<string, ActiveQuestProgress> ActiveQuestDict { get; set; } = new();
 
         [TitleGroup("Active Quests")]
         [ReadOnly]
-        public string trackedQuest;
+        [ShowInInspector]
+        public string TrackedQuest { get; set; }
 
-        string IQuestManager.TrackedQuest => trackedQuest;
-
-        protected virtual void Awake()
+        public void SetQuestDatabase(IQuestDatabase database)
         {
-            if (QuestFactoryObj != null && QuestFactoryObj.TryGetComponent(out IQuestFactory factory))
-            {
-                QuestFactory = factory;
-            }
+            QuestDatabase = database;
+        }
+
+        public void SetQuestFactory(IQuestFactory factory)
+        {
+            QuestFactory = factory;
         }
 
         [TitleGroup("All Quests")]
@@ -85,7 +53,7 @@ namespace RAXY.QuestSystem
             if (_allQuestInitialized && !force)
                 return;
 
-            foreach (var quest in QuestDatabase.Quests)
+            foreach (var quest in QuestDatabase.AllQuests)
             {
                 AllQuestStatusDict ??= new Dictionary<string, QuestStatus>();
                 ActiveQuestDict ??= new Dictionary<string, ActiveQuestProgress>();
@@ -96,8 +64,7 @@ namespace RAXY.QuestSystem
                     AllQuestStatusDict.Add(quest.QuestId, newQuestStatus);
                 }
 
-                quest.QuestNameLoc.RefreshCacheAsync().Forget();
-                quest.QuestDetailLoc.RefreshCacheAsync().Forget();
+                OnQuestInitialized(quest);
             }
 
             _allQuestInitialized = true;
@@ -131,8 +98,8 @@ namespace RAXY.QuestSystem
 
             if (!ActiveQuestDict.ContainsKey(questId))
             {
-                QuestSO questSO = QuestDatabase.GetQuestSO(questId);
-                var activeQuest = new ActiveQuestProgress(questSO, this);
+                IQuest quest = QuestDatabase.GetQuest(questId);
+                var activeQuest = new ActiveQuestProgress(quest, this);
                 activeQuest.OnQuestCompleted = () => QuestCompletedHandler(questId);
                 activeQuest.OnObjectiveProgressed = ObjectiveProgressedHandler;
                 ActiveQuestDict.Add(questId, activeQuest);
@@ -144,7 +111,7 @@ namespace RAXY.QuestSystem
                 NotifyQuestObjectsRefresh();
             }
 
-            if (string.IsNullOrEmpty(trackedQuest))
+            if (string.IsNullOrEmpty(TrackedQuest))
             {
                 SetQuestAsTracked(questId);
             }
@@ -159,8 +126,8 @@ namespace RAXY.QuestSystem
 
             if (ActiveQuestDict.ContainsKey(questId))
             {
-                trackedQuest = questId;
-                OnTrackedQuestChanged?.Invoke(trackedQuest);
+                TrackedQuest = questId;
+                OnTrackedQuestChanged?.Invoke(TrackedQuest);
             }
         }
 
@@ -168,16 +135,16 @@ namespace RAXY.QuestSystem
         [Button]
         public void UntrackQuest()
         {
-            trackedQuest = "";
-            OnTrackedQuestChanged?.Invoke(trackedQuest);
+            TrackedQuest = "";
+            OnTrackedQuestChanged?.Invoke(TrackedQuest);
         }
 
         void QuestCompletedHandler(string questId)
         {
             UntrackQuest();
 
-            var questSO = QuestDatabase.GetQuestSO(questId);
-            if (questSO.questCompleteAfterAllObjectives == false)
+            var quest = QuestDatabase.GetQuest(questId);
+            if (quest.QuestCompleteAfterAllObjectives == false)
                 return;
 
             CompleteQuest(questId);
@@ -208,6 +175,8 @@ namespace RAXY.QuestSystem
         }
 
         public virtual void NotifyQuestObjectsRefresh() { }
+
+        protected virtual void OnQuestInitialized(IQuest quest) { }
 
         protected virtual void OnQuestCompletedWithRewards(string questId) { }
 
@@ -264,13 +233,13 @@ namespace RAXY.QuestSystem
 
         public QuestStatus() { }
 
-        public QuestStatus(QuestSO questSO, IQuestManager questManager)
+        public QuestStatus(IQuest quest, IQuestManager questManager)
         {
             requirements = new();
 
             CompletionState = CompletionState.RequirementNotMet;
-            questId = questSO.QuestId;
-            foreach (var requirement in questSO.requirements)
+            questId = quest.QuestId;
+            foreach (var requirement in quest.Requirements)
             {
                 var newRequirement = questManager.QuestFactory.Create_QuestRequirement(requirement);
                 newRequirement.Subscribe();

@@ -20,16 +20,16 @@ namespace RAXY.QuestSystem
 
         [HideInInspector]
         public Action OnQuestCompleted;
-        public string QuestId => questSO.QuestId;
+        public string QuestId => quest.QuestId;
 
         [TitleGroup("Quest")]
         [PropertyOrder(-2)]
-        public QuestSO questSO;
+        public IQuest quest;
 
         [TitleGroup("Quest")]
         [ShowInInspector]
         [PropertyOrder(-1)]
-        public bool QuestCompleteAfterAllObjectives => questSO.questCompleteAfterAllObjectives;
+        public bool QuestCompleteAfterAllObjectives => quest.QuestCompleteAfterAllObjectives;
 
         [TitleGroup("Quest")]
         [ReadOnly]
@@ -74,14 +74,14 @@ namespace RAXY.QuestSystem
 
         IQuestManager _questManager;
 
-        public ActiveQuestProgress(QuestSO questSO, IQuestManager questManager)
+        public ActiveQuestProgress(IQuest quest, IQuestManager questManager)
         {
-            this.questSO = questSO;
+            this.quest = quest;
             _questManager = questManager;
 
-            foreach (var quest in questSO.objectiveSets)
+            foreach (var questObjectiveSet in quest.ObjectiveSets)
             {
-                objectiveSets.Add(new ObjectiveSetStatusWrapper(quest));
+                objectiveSets.Add(new ObjectiveSetStatusWrapper(questObjectiveSet));
             }
 
             TakeObjectiveSet(0);
