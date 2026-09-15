@@ -1,5 +1,7 @@
 # RAXY Quest System
 
+> **DEPRECATED:** This package is replaced by [RAXY Quest V2](https://github.com/RobyRAX/RAXY-Quest-V2). Prefer the replacement for new projects.
+
 RAXY Quest System provides a modular quest foundation for Unity projects: quest data, requirements, objectives, progress tracking, and world quest objects.
 
 ## Features
